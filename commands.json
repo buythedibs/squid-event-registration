@@ -2,20 +2,8 @@
   "$schema": "https://cdn.subsquid.io/schemas/commands.json",
   "commands": {
     "clean": {
-      "description": "Delete all build artifacts",
+      "description": "delete all build artifacts",
       "cmd": ["npx", "--yes", "rimraf", "lib"]
-    },
-    "generate": {
-      "description": "Generate a squid from an ABI file",
-      "cmd": ["squid-gen-abi"]
-    },
-    "generate:with-config": {
-      "description": "Generate a squid from an ABI file using a config file",
-      "cmd": ["squid-gen", "config"]
-    },
-    "typegen": {
-      "description": "Generate data access classes for an ABI file(s) in the ./abi folder",
-      "cmd": ["squid-ink-typegen"]
     },
     "build": {
       "description": "Build the squid project",
@@ -24,11 +12,11 @@
     },
     "up": {
       "description": "Start a PG database",
-      "cmd": ["docker", "compose", "up", "-d"]
+      "cmd": ["docker-compose", "up", "-d"]
     },
     "down": {
       "description": "Drop a PG database",
-      "cmd": ["docker", "compose", "down"]
+      "cmd": ["docker-compose", "down"]
     },
     "migration:apply": {
       "description": "Apply the DB migrations",
@@ -59,6 +47,7 @@
     },
     "process:prod": {
       "description": "Start the squid processor",
+      "deps": ["migration:apply"],
       "cmd": ["node", "lib/processor.js"],
       "hidden": true
     },
@@ -68,14 +57,26 @@
     },
     "serve:prod": {
       "description": "Start the GraphQL API server with caching and limits",
-      "cmd": ["squid-graphql-server",
-        "--dumb-cache", "in-memory",
-        "--dumb-cache-ttl", "1000",
-        "--dumb-cache-size", "100",
-        "--dumb-cache-max-age", "1000" ]
+      "cmd": [
+        "squid-graphql-server",
+        "--dumb-cache",
+        "in-memory",
+        "--dumb-cache-ttl",
+        "1000",
+        "--dumb-cache-size",
+        "100",
+        "--dumb-cache-max-age",
+        "1000"
+      ]
     },
     "check-updates": {
-      "cmd": ["npx", "--yes", "npm-check-updates", "--filter=/subsquid/", "--upgrade"],
+      "cmd": [
+        "npx",
+        "--yes",
+        "npm-check-updates",
+        "--filter=/subsquid/",
+        "--upgrade"
+      ],
       "hidden": true
     },
     "bump": {

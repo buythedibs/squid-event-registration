@@ -1,7 +1,7 @@
 manifestVersion: subsquid.io/v0.1
-name: squid_safe_send
+name: squid-safe-send
 version: 1
-description: Ink! contract indexing squid
+description: Safe Send smart contract indexing on Aleph Zero Testnet.
 build: 
 deploy:
   addons:

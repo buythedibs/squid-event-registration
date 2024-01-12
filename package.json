@@ -1,26 +1,39 @@
 {
-  "name": "squid-ink-template",
+  "name": "squid-safe-send",
   "private": true,
   "scripts": {
-    "build": "rm -rf lib && tsc"
+    "build": "rm -rf lib && tsc",
+    "update": "npx npm-check-updates --filter /subsquid/ --upgrade && npm i -f",
+    "db:migrate": "npx squid-typeorm-migration apply",
+    "processor:start": "node lib/processor.js",
+    "query-node:start": "squid-graphql-server",
+    "lint": "eslint . --ext .ts --ignore-path .gitignore --ignore-pattern src/abi/**/*  --fix"
   },
   "dependencies": {
-    "@subsquid/archive-registry": "3.3.0",
-    "@subsquid/graphql-server": "4.5.0",
-    "@subsquid/ink-abi": "^3.0.1",
-    "@subsquid/ss58": "^2.0.1",
-    "@subsquid/substrate-processor": "8.1.1",
-    "@subsquid/typeorm-migration": "1.3.0",
-    "@subsquid/typeorm-store": "1.2.6",
-    "dotenv": "^16.3.1",
-    "pg": "8.11.3",
+    "@ethersproject/abi": "^5.7.0",
+    "@subsquid/archive-registry": "3.2.0",
+    "@subsquid/graphql-server": "4.3.0",
+    "@subsquid/ink-abi": "^1.1.0",
+    "@subsquid/ss58": "^0.1.4",
+    "@subsquid/substrate-processor": "^7.2.1",
+    "@subsquid/typeorm-migration": "1.2.1",
+    "@subsquid/typeorm-store": "^1.2.4",
+    "ethers": "^5.7.0",
+    "pg": "8.8.0",
     "typeorm": "^0.3.17"
   },
   "devDependencies": {
-    "@subsquid/ink-typegen": "^3.0.2",
-    "@subsquid/substrate-metadata-explorer": "^3.1.1",
-    "@subsquid/typeorm-codegen": "^1.3.2",
-    "@types/node": "^20.9.0",
-    "typescript": "~5.2.2"
+    "@subsquid/ink-typegen": "^0.2.1",
+    "@subsquid/substrate-metadata-explorer": "^1.1.2",
+    "@subsquid/substrate-typegen": "^8.0.1",
+    "@subsquid/typeorm-codegen": "^1.3.1",
+    "@types/node": "^17.0.23",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-airbnb-typescript": "^17.1.0",
+    "eslint-config-airbnb-typescript-base": "^4.0.2",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "typescript": "~4.6.2"
   }
 }

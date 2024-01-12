@@ -1,0 +1,14 @@
+type Cheque @entity {
+  id: ID!
+  from: String! @index
+  to: String! @index
+  amount: BigInt!
+  tokenAddress: String
+  memo: String
+  fee: BigInt!
+  status: Int! @index
+  recipientAzeroId: String
+  senderAzeroId: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
