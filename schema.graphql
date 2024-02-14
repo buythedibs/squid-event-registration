@@ -1,14 +1,7 @@
-type Cheque @entity {
+type Registration @entity {
   id: ID!
-  from: String! @index
-  to: String! @index
-  amount: BigInt!
-  tokenAddress: String
-  memo: String
-  fee: BigInt!
-  status: Int! @index
-  recipientAzeroId: String
-  senderAzeroId: String
+  referrer: String @index
+  destroyed: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
 }

@@ -1,6 +1,6 @@
-# Squid Safe Send
+# Squid Event Registration
 
-This squid tracks the events of the Safe Send smart contract on the Aleph Zero Testnet and serves them via graphql API.
+This squid tracks the events of the Event Registration smart contract on the Aleph Zero Testnet and serves them via graphql API.
 
 ## Getting Started
 ### Prerequisites
@@ -35,7 +35,7 @@ Update squid.yaml and deploy as per [this](https://docs.subsquid.io/deploy-squid
 
 ```bash
 # add --hard-reset if you want to drop and re-create all the squid resources including the database.
-sqd deploy --org btngroup ../squid-safe-send --hard-reset
+sqd deploy --org btngroup ../squid-event-registration --hard-reset
 ```
 
 ## Dev flow
@@ -72,7 +72,7 @@ See [docs on database migrations](https://docs.subsquid.io/basics/db-migrations)
 ### 4. Import ABI contract and generate interfaces to decode events
 
 ```bash
-npx squid-ink-typegen --abi abi/safe_send.json --output src/abi/safe_send.ts
+npx squid-ink-typegen --abi abi/az_event_registration.json --output src/abi/az_event_registration.ts
 ```
 
 ### 5. Checking code
