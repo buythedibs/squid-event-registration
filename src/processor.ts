@@ -10,18 +10,18 @@ import {
   SubstrateBatchProcessorFields,
 } from "@subsquid/substrate-processor";
 import { Store, TypeormDatabase } from "@subsquid/typeorm-store";
-import * as azSafeSend from "./abi/safe_send";
-import { Cheque } from "./model/generated";
+import * as azEventRegistration from "./abi/az_event_registration";
+import { Registration } from "./model/generated";
 
 export type Block = BlockHeader<Fields>
 export type Event = _Event<Fields>
 export type Fields = SubstrateBatchProcessorFields<typeof processor>
 export type ProcessorContext<Store> = DataHandlerContext<Store, Fields>
 
-const SAFE_SEND_CONTRACT_ADDRESS_SS58 =
-  "5EZJQm6g64rhajevm6k4NZmPgyiy95FUAk8Hdz1yaHWo83np";
-const SAFE_SEND_CONTRACT_ADDRESS = toHex(ss58.decode(SAFE_SEND_CONTRACT_ADDRESS_SS58).bytes);
-const SS58_PREFIX = ss58.decode(SAFE_SEND_CONTRACT_ADDRESS_SS58).prefix;
+const EVENT_REGISTRATION_CONTRACT_ADDRESS_SS58 =
+  "5EzzRwEJEfUQHr43aHKdtLryvtizvxEUFAtFwmqPrPb8EUvJ";
+const EVENT_REGISTRATION_CONTRACT_ADDRESS = toHex(ss58.decode(EVENT_REGISTRATION_CONTRACT_ADDRESS_SS58).bytes);
+const SS58_PREFIX = ss58.decode(EVENT_REGISTRATION_CONTRACT_ADDRESS_SS58).prefix;
 
 const processor = new SubstrateBatchProcessor()
   .setDataSource({
@@ -32,7 +32,7 @@ const processor = new SubstrateBatchProcessor()
     }
   })
   .addContractsContractEmitted({
-    contractAddress: [SAFE_SEND_CONTRACT_ADDRESS]
+    contractAddress: [EVENT_REGISTRATION_CONTRACT_ADDRESS]
   })
   .setFields({
       block: {
@@ -46,121 +46,137 @@ const processor = new SubstrateBatchProcessor()
   })
 
 processor.run(new TypeormDatabase({supportHotBlocks: true}), async ctx => {
-  const cheques = extractCheques(ctx);
-  const chequeUpdates = extractChequeUpdates(ctx);
+  const registrations = extractRegistrations(ctx);
+  const updates = extractUpdates(ctx);
+  const destroys = extractDestroys(ctx);
 
-  // 1. Create new cheques
-  const newCheques = cheques.map((cheque) => {
-    return new Cheque({
-      id: cheque.id,
-      from: cheque.from,
-      to: cheque.to,
-      amount: cheque.amount,
-      tokenAddress: cheque.token_address,
-      memo: cheque.memo,
-      fee: cheque.fee,
-      status: 0,
-      recipientAzeroId: cheque.recipient_azero_id,
-      senderAzeroId: cheque.sender_azero_id,
-      createdAt: cheque.created_at,
-      updatedAt: cheque.created_at,
+  // 1. Create registrations
+  const newRegistrations = registrations.map((registration) => {
+    return new Registration({
+      id: registration.address,
+      referrer: registration.referrer,
+      destroyed: false,
+      createdAt: registration.created_at,
+      updatedAt: registration.created_at,
     });
   });
-  await ctx.store.insert(newCheques);
+  await ctx.store.insert(newRegistrations);
 
-  // 2. Update cheques
-  for (const gu of chequeUpdates) {
-    const cheque = await ctx.store.get(Cheque, gu.id);
-    if (cheque) {
-      cheque.status = gu.status;
-      cheque.updatedAt = gu.updated_at;
+  // 2. Update registrations
+  for (const gu of updates) {
+    const registration = await ctx.store.get(Registration, gu.address);
+    if (registration) {
+      registration.referrer = gu.referrer;
+      registration.updatedAt = gu.updated_at;
       await ctx.store.save(
-        cheque
+        registration
+      );
+    }
+  }
+
+  // 3. Destroys
+  for (const gu of destroys) {
+    const registration = await ctx.store.get(Registration, gu.address);
+    if (registration) {
+      registration.destroyed = true;
+      registration.updatedAt = gu.updated_at;
+      await ctx.store.save(
+        registration
       );
     }
   }
 });
 
-interface ChequeCreateEvent {
-  id: string;
-  from: string;
-  to: string;
-  amount: bigint;
-  token_address?: string;
-  memo?: string;
-  fee: bigint;
-  recipient_azero_id?: string;
-  sender_azero_id?: string;
+interface RegistrationEvent {
+  address: string;
+  referrer?: string;
   created_at: Date;
 }
 
-// 1 => Collected
-// 2 => Cancelled
-interface ChequeUpdateEvent {
-  id: string;
-  status: number;
+interface UpdateEvent {
+  address: string;
+  referrer?: string;
   updated_at: Date;
 }
 
-function extractCheques(ctx: ProcessorContext<Store>): ChequeCreateEvent[] {
-  const cheques: ChequeCreateEvent[] = [];
-  for (const block of ctx.blocks) {
-    assert(block.header.timestamp, `Block ${block.header.height} had no timestamp`)
-    for (const event of block.events) {
-      if (
-        event.name === "Contracts.ContractEmitted" &&
-        event.args.contract === SAFE_SEND_CONTRACT_ADDRESS
-      ) {
-        const decodedEvent = azSafeSend.decodeEvent(event.args.data);
-        if (decodedEvent.__kind === "Create") {
-          const cheque: ChequeCreateEvent = {
-            id: String(decodedEvent.id),
-            from: ss58.codec(SS58_PREFIX).encode(decodedEvent.from),
-            to: ss58.codec(SS58_PREFIX).encode(decodedEvent.to),
-            amount: decodedEvent.amount,
-            token_address: undefined,
-            memo: decodedEvent.memo,
-            fee: decodedEvent.fee,
-            recipient_azero_id: decodedEvent.recipientAzeroId,
-            sender_azero_id: decodedEvent.senderAzeroId,
-            created_at: new Date(block.header.timestamp)
-          };
-          if (decodedEvent.tokenAddress) {
-            cheque.token_address = ss58.codec(SS58_PREFIX).encode(decodedEvent.tokenAddress)
-          }
-          cheques.push(cheque);
-        }
-      }
-    }
-  }
-  return cheques;
+interface DestroyEvent {
+  address: string;
+  updated_at: Date;
 }
 
-function extractChequeUpdates(ctx: ProcessorContext<Store>): ChequeUpdateEvent[] {
-  const chequeUpdateEvents: ChequeUpdateEvent[] = [];
+function extractRegistrations(ctx: ProcessorContext<Store>): RegistrationEvent[] {
+  const registrations: RegistrationEvent[] = [];
   for (const block of ctx.blocks) {
     assert(block.header.timestamp, `Block ${block.header.height} had no timestamp`)
     for (const event of block.events) {
       if (
         event.name === "Contracts.ContractEmitted" &&
-        event.args.contract === SAFE_SEND_CONTRACT_ADDRESS
+        event.args.contract === EVENT_REGISTRATION_CONTRACT_ADDRESS
       ) {
-        const decodedEvent = azSafeSend.decodeEvent(event.args.data);
-        if (decodedEvent.__kind === "Cancel") {
-          chequeUpdateEvents.push({
-            id: String(decodedEvent.id),
-            status: 2,
-            updated_at: new Date(block.header.timestamp),
-          });
-        } else if (decodedEvent.__kind === "Collect") {
-          chequeUpdateEvents.push({
-            id: String(decodedEvent.id),
-            status: 1,
-            updated_at: new Date(block.header.timestamp),
-          });
+        const decodedEvent = azEventRegistration.decodeEvent(event.args.data);
+        if (decodedEvent.__kind === "Register") {
+          const registration: RegistrationEvent = {
+            address: ss58.codec(SS58_PREFIX).encode(decodedEvent.address),
+            referrer: undefined,
+            created_at: new Date(block.header.timestamp)
+          };
+          if (decodedEvent.referrer) {
+            registration.referrer = ss58.codec(SS58_PREFIX).encode(decodedEvent.referrer)
+          }
+          registrations.push(registration);
         }
       }
     }
   }
-  return chequeUpdateEvents;
+  return registrations;
+}
+
+function extractUpdates(ctx: ProcessorContext<Store>): UpdateEvent[] {
+  const updateEvents: UpdateEvent[] = [];
+  for (const block of ctx.blocks) {
+    assert(block.header.timestamp, `Block ${block.header.height} had no timestamp`)
+    for (const event of block.events) {
+      if (
+        event.name === "Contracts.ContractEmitted" &&
+        event.args.contract === EVENT_REGISTRATION_CONTRACT_ADDRESS
+      ) {
+        const decodedEvent = azEventRegistration.decodeEvent(event.args.data);
+        if (decodedEvent.__kind === "Update") {
+          const registration: UpdateEvent = {
+            address: ss58.codec(SS58_PREFIX).encode(decodedEvent.address),
+            referrer: undefined,
+            updated_at: new Date(block.header.timestamp),
+          };
+          if (decodedEvent.referrer) {
+            registration.referrer = ss58.codec(SS58_PREFIX).encode(decodedEvent.referrer)
+          }
+          updateEvents.push(registration);
+        }
+      }
+    }
+  }
+  return updateEvents;
+}
+
+function extractDestroys(ctx: ProcessorContext<Store>): DestroyEvent[] {
+  const destroyEvents: DestroyEvent[] = [];
+  for (const block of ctx.blocks) {
+    assert(block.header.timestamp, `Block ${block.header.height} had no timestamp`)
+    for (const event of block.events) {
+      if (
+        event.name === "Contracts.ContractEmitted" &&
+        event.args.contract === EVENT_REGISTRATION_CONTRACT_ADDRESS
+      ) {
+        const decodedEvent = azEventRegistration.decodeEvent(event.args.data);
+        if (decodedEvent.__kind === "Destroy") {
+          const registration: DestroyEvent = {
+            address: ss58.codec(SS58_PREFIX).encode(decodedEvent.address),
+            updated_at: new Date(block.header.timestamp),
+          };
+          destroyEvents.push(registration);
+        }
+      }
+    }
+  }
+  return destroyEvents;
 }

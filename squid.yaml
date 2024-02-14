@@ -1,7 +1,7 @@
 manifestVersion: subsquid.io/v0.1
-name: squid-safe-send
+name: squid-event-registration
 version: 1
-description: Safe Send smart contract indexing on Aleph Zero Testnet.
+description: Event registration smart contract indexing on Aleph Zero Testnet.
 build: 
 deploy:
   addons:

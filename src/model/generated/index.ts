@@ -1,1 +1,1 @@
-export * from "./cheque.model"
+export * from "./registration.model"
