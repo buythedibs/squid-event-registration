@@ -19,15 +19,15 @@ export type Fields = SubstrateBatchProcessorFields<typeof processor>
 export type ProcessorContext<Store> = DataHandlerContext<Store, Fields>
 
 const EVENT_REGISTRATION_CONTRACT_ADDRESS_SS58 =
-  "5EzzRwEJEfUQHr43aHKdtLryvtizvxEUFAtFwmqPrPb8EUvJ";
+  "5CMnrneNCiYqpib3pA4xmtv3yngHWGNEdfdU9bvSgsLyembz";
 const EVENT_REGISTRATION_CONTRACT_ADDRESS = toHex(ss58.decode(EVENT_REGISTRATION_CONTRACT_ADDRESS_SS58).bytes);
 const SS58_PREFIX = ss58.decode(EVENT_REGISTRATION_CONTRACT_ADDRESS_SS58).prefix;
 
 const processor = new SubstrateBatchProcessor()
   .setDataSource({
-    archive: lookupArchive('aleph-zero-testnet', {release: 'ArrowSquid'}),
+    archive: lookupArchive('aleph-zero', {release: 'ArrowSquid'}),
     chain: {
-      url: "wss://ws.test.azero.dev",
+      url: "wss://ws.azero.dev",
       rateLimit: 1000
     }
   })
@@ -42,7 +42,7 @@ const processor = new SubstrateBatchProcessor()
   .setBlockRange({
     // genesis block happens to not have a timestamp, so it's easier
     // to start from 1 in cases when the deployment height is unknown
-    from: 52780000
+    from: 72_459_128
   })
 
 processor.run(new TypeormDatabase({supportHotBlocks: true}), async ctx => {
